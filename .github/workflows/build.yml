@@ -1,0 +1,76 @@
+name: Build PDF Extractor Windows Executable
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*" # 'v'로 시작하는 모든 태그에 대해 워크플로우 실행
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # 수동으로 워크플로우를 실행할 수 있게 함
+# 워크플로우에 필요한 권한 설정
+permissions:
+  contents: write # 릴리즈 생성 및 에셋 업로드를 위한 권한
+  actions: read # 워크플로우 정보 접근을 위한 권한
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Install system dependencies (for OCR)
+        run: |
+          # Tesseract OCR 설치 (Windows)
+          choco install tesseract -y
+          # 환경 변수 설정
+          echo "TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata" >> $GITHUB_ENV
+          
+      - name: Build PDF Extractor EXE
+        run: python build.py
+
+      - name: Upload PDF Extractor EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-extractor-exe
+          path: dist/pdf-extractor.exe
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/pdf-extractor.exe
+          name: PDF Extractor ${{ github.ref_name }}
+          body: |
+            ## PDF Extractor ${{ github.ref_name }}
+            
+            PDF 파일에서 텍스트와 테이블을 추출하는 Windows 실행 파일입니다.
+            
+            ### 기능
+            - PDF 텍스트 추출 (PyPDF2, pdfplumber, PyMuPDF 지원)
+            - PDF 테이블 추출 및 Excel 변환
+            - 단일 파일 및 디렉토리 일괄 처리
+            
+            ### 사용법
+            ```
+            pdf-extractor.exe --file your_file.pdf
+            pdf-extractor.exe --directory your_pdf_folder
+            pdf-extractor.exe --help
+            ```
+            
+            ### 시스템 요구사항
+            - Windows 10/11 (64-bit)
+            - 인터넷 연결 불필요 (독립 실행형)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
