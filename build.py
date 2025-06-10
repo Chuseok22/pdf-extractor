@@ -11,6 +11,11 @@ import subprocess
 import platform
 from pathlib import Path
 
+# Window CP1252 환경 stdout 인코딩 설정
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except AttributeError:
+    pass
 
 def get_build_command():
     """플랫폼별 빌드 명령어 생성"""
