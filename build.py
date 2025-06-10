@@ -32,9 +32,11 @@ def get_build_command():
     
     # 숨겨진 import 추가
     hidden_imports = [
-        "PyQt5.QtCore",
-        "PyQt5.QtWidgets", 
-        "PyQt5.QtGui",
+        "tkinter",
+        "tkinter.ttk",
+        "tkinter.filedialog", 
+        "tkinter.messagebox",
+        "tkinter.scrolledtext",
         "pandas",
         "openpyxl",
         "pdfplumber",
@@ -66,15 +68,17 @@ def get_build_command():
     
     # 플랫폼별 설정
     if system == "Windows":
-        cmd.extend([
-            "--icon=icon.ico",  # 아이콘이 있다면
-            "--version-file=version_info.txt"  # 버전 정보가 있다면
-        ])
+        # 아이콘이 있다면 추가
+        if os.path.exists("icon.ico"):
+            cmd.extend(["--icon=icon.ico"])
+        # 버전 정보가 있다면 추가
+        if os.path.exists("version_info.txt"):
+            cmd.extend(["--version-file=version_info.txt"])
     elif system == "Darwin":  # macOS
-        cmd.extend([
-            "--icon=icon.icns",  # 아이콘이 있다면
-            "--osx-bundle-identifier=com.pdfextractor.app"
-        ])
+        # 아이콘이 있다면 추가
+        if os.path.exists("icon.icns"):
+            cmd.extend(["--icon=icon.icns"])
+        cmd.extend(["--osx-bundle-identifier=com.pdfextractor.app"])
     
     # 메인 파일 추가
     cmd.append("main.py")
@@ -94,9 +98,11 @@ a = Analysis(
     binaries=[],
     datas=[('pdf_extractor.py', '.')],
     hiddenimports=[
-        'PyQt5.QtCore',
-        'PyQt5.QtWidgets', 
-        'PyQt5.QtGui',
+        'tkinter',
+        'tkinter.ttk',
+        'tkinter.filedialog',
+        'tkinter.messagebox',
+        'tkinter.scrolledtext',
         'pandas',
         'openpyxl',
         'pdfplumber',
@@ -156,7 +162,6 @@ if platform.system() == 'Darwin':
     app = BUNDLE(
         exe,
         name='PDF Extractor.app',
-        icon='icon.icns',
         bundle_identifier='com.pdfextractor.app',
         version='0.0.1'
     )
@@ -222,28 +227,59 @@ def check_dependencies():
     """필요한 의존성 확인"""
     print("의존성 확인 중...")
     
-    required_packages = [
-        "PyQt5", "pandas", "openpyxl", "pdfplumber", 
-        "PyPDF2", "PyMuPDF", "camelot-py", "tabula-py",
-        "opencv-python", "Pillow", "pytesseract", "easyocr",
-        "pyinstaller"
-    ]
+    # 패키지명과 실제 import 이름 매핑
+    required_packages = {
+        "tkinter": "tkinter",  # Python 기본 라이브러리
+        "pandas": "pandas", 
+        "openpyxl": "openpyxl",
+        "pdfplumber": "pdfplumber",
+        "PyPDF2": "PyPDF2",
+        "PyMuPDF": "fitz",
+        "camelot-py": "camelot",
+        "tabula-py": "tabula",
+        "opencv-python": "cv2",
+        "Pillow": "PIL",
+        "pyinstaller": "PyInstaller"
+    }
     
-    missing_packages = []
+    # 선택적 패키지 (없어도 빌드 진행 가능)
+    optional_packages = {
+        "pytesseract": "pytesseract",
+        "easyocr": "easyocr"
+    }
     
-    for package in required_packages:
+    missing_required = []
+    missing_optional = []
+    
+    # 필수 패키지 확인
+    for package_name, import_name in required_packages.items():
         try:
-            __import__(package.replace("-", "_"))
+            __import__(import_name)
+            print(f"✓ {package_name} 설치됨")
         except ImportError:
-            missing_packages.append(package)
+            print(f"✗ {package_name} 누락")
+            missing_required.append(package_name)
     
-    if missing_packages:
-        print(f"누락된 패키지: {missing_packages}")
+    # 선택적 패키지 확인
+    for package_name, import_name in optional_packages.items():
+        try:
+            __import__(import_name)
+            print(f"✓ {package_name} 설치됨 (선택사항)")
+        except ImportError:
+            print(f"⚠ {package_name} 누락 (선택사항)")
+            missing_optional.append(package_name)
+    
+    if missing_required:
+        print(f"\n필수 패키지 누락: {missing_required}")
         print("다음 명령어로 설치하세요:")
-        print(f"pip install {' '.join(missing_packages)}")
+        print(f"pip install {' '.join(missing_required)}")
         return False
     
-    print("모든 의존성이 설치되어 있습니다.")
+    if missing_optional:
+        print(f"\n선택적 패키지 누락: {missing_optional}")
+        print("이 패키지들은 일부 기능에만 필요하므로 빌드를 계속 진행합니다.")
+    
+    print("모든 필수 의존성이 설치되어 있습니다.")
     return True
 
 
@@ -262,8 +298,9 @@ def main():
     success = build_executable()
     
     if success:
-        print("\n🎉 빌드가 성공적으로 완료되었습니다!")
-        print("dist/ 폴더에서 실행 파일을 확인하세요.")
+        print("\n🎉 Tkinter 기반 PDF Extractor 빌드가 성공적으로 완료되었습니다!")
+        print("📁 dist/ 폴더에서 실행 파일을 확인하세요.")
+        print("🚀 PyQt5 의존성 문제가 해결되어 안정적인 빌드가 가능합니다.")
     else:
         print("\n❌ 빌드에 실패했습니다.")
         sys.exit(1)
